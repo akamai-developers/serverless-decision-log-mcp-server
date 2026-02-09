@@ -1,0 +1,5 @@
+mcp.wasm
+target/
+.spin/
+.spin-aka/
+.vscode/

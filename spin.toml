@@ -1,0 +1,20 @@
+#:schema https://schemas.spinframework.dev/spin/manifest-v2/latest.json
+spin_manifest_version = 2
+
+[application]
+name = "decision-log-mcp-server"
+version = "0.1.0"
+authors = ["Thorsten Hans <thans@akamai.com>"]
+description = ""
+
+[[trigger.http]]
+route = "/..."
+component = "decision-log-mcp-server"
+
+[component.decision-log-mcp-server]
+source = "mcp.wasm"
+key_value_stores = ["default"]
+
+[component.decision-log-mcp-server.build]
+command = "make build && wasmcp compose server target/wasm32-wasip2/release/decision_log_mcp.wasm --transport http --runtime spin -o mcp.wasm --force"
+watch = ["src/**/*.rs", "Cargo.toml"]
