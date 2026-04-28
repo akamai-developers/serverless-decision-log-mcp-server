@@ -1,9 +1,10 @@
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
-use spin_sdk::key_value::Store;
 
-use crate::bindings::wasmcp::mcp_v20250618::mcp::{Tool, ToolAnnotations, ToolOptions};
+use crate::bindings::wasmcp::keyvalue::store::{self as Store};
+use crate::bindings::wasmcp::mcp_v20251125::mcp::{Tool, ToolAnnotations, ToolOptions};
 
+const STORE_NAME: &str = "default";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Decision {
     pub slug: String,
@@ -12,13 +13,14 @@ pub struct Decision {
 
 impl Decision {
     pub fn list_decisions(query: Option<String>) -> Result<Vec<Self>> {
-        let store = Store::open_default()?;
-        let all_keys = store.get_keys()?;
+        let store = Store::open(STORE_NAME)?;
+        let all_keys = store.list_keys(None)?;
 
         let mut decisions = Vec::new();
-        for key in all_keys {
+        for key in all_keys.keys {
             if key.starts_with(KEY_PREFIX) {
-                if let Some(decision) = store.get_json::<Decision>(&key)? {
+                if let Some(raw) = store.get_string(&key)? {
+                    let decision = serde_json::from_str::<Decision>(raw.as_str())?;
                     if let Some(ref q) = query {
                         if decision.matches_query(q) {
                             decisions.push(decision);
@@ -37,31 +39,41 @@ impl Decision {
     }
 
     pub fn load_by_slug(slug: String) -> Result<Self> {
-        let store = Store::open_default()?;
-        store
-            .get_json::<Decision>(get_decision_key(slug))?
-            .context("No decision found")
+        let store = Store::open(STORE_NAME)?;
+        let raw = store.get_string(get_decision_key(slug).as_str())?;
+        if raw.is_none() {
+            return Err(anyhow!("Decision not found"));
+        }
+        Ok(serde_json::from_str::<Decision>(raw.unwrap().as_str())?)
     }
 
     pub fn insert(&self) -> Result<()> {
-        let store = Store::open_default()?;
+        let store = Store::open(STORE_NAME)?;
         let key = get_decision_key(self.slug.clone());
         if store.exists(key.as_str())? {
             return Err(anyhow::anyhow!("Decision with this slug already exists"));
         }
-        store.set_json(key, &self)
+        let value = serde_json::to_string(&self)?;
+        store
+            .set_string(key.as_str(), value.as_str())
+            .with_context(|| "Could not store new decision")
     }
 
     pub fn update(&self) -> Result<()> {
-        let store = Store::open_default()?;
-        store.set_json(get_decision_key(self.slug.clone()), &self)
+        let store = Store::open(STORE_NAME)?;
+        let key = get_decision_key(self.slug.clone());
+        let value = serde_json::to_string(&self)?;
+        store
+            .set_string(key.as_str(), value.as_str())
+            .with_context(|| "Could not update decision")
     }
 
     pub fn delete_by_slug(slug: String) -> Result<()> {
-        let store = Store::open_default()?;
+        let store = Store::open(STORE_NAME)?;
+        let key = get_decision_key(slug);
         store
-            .delete(get_decision_key(slug).as_str())
-            .context("Could not delete decision")
+            .delete(key.as_str())
+            .with_context(|| "Could not delete decision")
     }
 }
 
@@ -85,6 +97,7 @@ pub fn get_decision_log_tools() -> Vec<Tool> {
             .to_string(),
             options: Some(ToolOptions {
                 meta: None,
+                icons: None,
                 annotations: Some(ToolAnnotations {
                     read_only_hint: Some(true),
                     destructive_hint: Some(false),
@@ -109,6 +122,7 @@ pub fn get_decision_log_tools() -> Vec<Tool> {
             .to_string(),
             options: Some(ToolOptions {
                 meta: None,
+                icons: None,
                  annotations: Some(ToolAnnotations {
                     read_only_hint: Some(true),
                     destructive_hint: Some(false),
@@ -134,6 +148,7 @@ pub fn get_decision_log_tools() -> Vec<Tool> {
             .to_string(),
             options: Some(ToolOptions{
                 meta: None,
+                icons: None,
                  annotations: Some(ToolAnnotations {
                     read_only_hint: Some(false),
                     destructive_hint: Some(false),
@@ -159,6 +174,7 @@ pub fn get_decision_log_tools() -> Vec<Tool> {
             .to_string(),
             options: Some(ToolOptions{
                 meta: None,
+                icons: None,
                 annotations: Some(ToolAnnotations {
                     read_only_hint: Some(false),
                     destructive_hint: Some(true),
@@ -183,6 +199,7 @@ pub fn get_decision_log_tools() -> Vec<Tool> {
             .to_string(),
             options: Some(ToolOptions{
                 meta: None,
+                icons: None,
                annotations: Some(ToolAnnotations {
                     read_only_hint: Some(false),
                     destructive_hint: Some(true),

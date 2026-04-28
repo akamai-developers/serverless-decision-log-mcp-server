@@ -10,12 +10,10 @@ mod bindings {
 }
 
 mod decision;
-
-use bindings::exports::wasmcp::mcp_v20250618::tools::Guest;
-use bindings::wasmcp::mcp_v20250618::mcp::*;
-use bindings::wasmcp::mcp_v20250618::server_handler::MessageContext;
-
-use crate::decision::{get_decision_log_tools, Decision};
+use bindings::exports::wasmcp::mcp_v20251125::tools::Guest;
+use bindings::wasmcp::mcp_v20251125::mcp::*;
+use bindings::wasmcp::mcp_v20251125::server_handler::MessageContext;
+use decision::{get_decision_log_tools, Decision};
 
 struct DecisionLog;
 

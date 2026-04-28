@@ -5,5 +5,6 @@ package wasmcp:decision-log-mcp@0.1.0;
 /// This component exports the tools interface.
 /// The CLI will automatically wrap it with tools-middleware for composition.
 world decision-log-mcp {
-    export wasmcp:mcp-v20250618/tools@0.1.8;
+    export wasmcp:mcp-v20251125/tools@0.1.1;
+    import wasmcp:keyvalue/store@0.1.0;
 }
